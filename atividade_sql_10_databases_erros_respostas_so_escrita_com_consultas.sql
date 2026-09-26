@@ -1270,3 +1270,12 @@ FROM ordens c
 LEFT JOIN servicos t ON c.id_servico = t.id
 WHERE t.id IS NULL;
 
+/*
+1. Para que serve o ping?
+O ping serve para verificar se existe comunicação entre dois dispositivos em uma rede. Ele envia mensagens ICMP ao destino e verifica se recebe uma resposta.
+2. Qual a função do gateway?
+O gateway é o dispositivo responsável por encaminhar dados para outras redes. Nesta atividade, o roteador 192.168.10.1 funciona como gateway dos computadores.
+3. O que pode causar uma falha de comunicação?
+Uma falha pode ser causada por IP incorreto, máscara de rede errada, gateway incorreto, cabos ou portas mal conectados, interfaces desativadas ou dispositivos configurados em redes diferentes.
+4. Por que proteger o acesso ao roteador?
+Porque o roteador controla a comunicação da rede. Uma pessoa sem autorização poderia alterar configurações, interromper a comunicação ou comprometer a segurança da rede.
