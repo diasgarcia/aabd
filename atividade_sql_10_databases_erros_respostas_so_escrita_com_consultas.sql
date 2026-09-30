@@ -43,111 +43,62 @@ CREATE TABLE avaliacoes (
 
 INSERT INTO pacientes VALUES
 (1,'Ana Souza','ana@email.com',28,'14999990001'),
-(2,'Bruno Lima','bruno@email.com',35,'14 99999-0002'),
-(3,'Carla Mendes','carla@email',-4,NULL),
-(4,'Diego Alves','diego@email.com',42,'14999990004'),
+(2,'Bruno Lima','bruno@email.com',35,'14999990002'),
+(3,'Carla Mendes','carla@email.com',30,'14999990003'),
 (4,'Diego Alves','diego@email.com',42,'14999990004');
 
 INSERT INTO medicos VALUES
 (1,'Dra. Paula','Cardiologia',15000),
-(2,'Dr. Marcos','Ortopedia',-8000),
+(2,'Dr. Marcos','Ortopedia',8000),
 (3,'Dra. Renata','Pediatria',12000),
 (4,'Dr. João','Cardiologia',12000);
 
 INSERT INTO consultas VALUES
 (1,1,1,'2026-09-01',300,'Realizada'),
-(2,2,2,'2026-09-02',-150,'Realizada'),
-(3,3,99,'2026-12-30',500,'Confirmada'),
-(4,1,1,NULL,300,'X');
+(2,2,2,'2026-09-02',150,'Realizada'),
+(3,3,3,'2026-09-03',500,'Confirmada'),
+(4,1,1,'2026-09-04',300,'Pendente');
 
 INSERT INTO avaliacoes VALUES
 (1,1,5.0,'Ótimo atendimento'),
-(2,2,9.0,'Nota impossível'),
-(3,99,4.0,'Consulta inexistente');
+(2,2,5.0,'Nota corrigida'),
+(3,3,4.0,'Consulta corrigida');
 
+-- O QUE ESTAVA ERRADO:
+-- pacientes: telefone com formato inconsistente, e-mail inválido, idade negativa,
+-- telefone NULL e registro duplicado com a mesma chave primária.
+-- medicos: salário negativo.
+-- consultas: valor negativo, médico inexistente, data inconsistente, data NULL e status inválido.
+-- avaliacoes: nota acima de 5 e referência para consulta inexistente.
 
--- SUGESTÃO:
--- 1. Corrija os dados errados com UPDATE.
--- 2. Remova duplicidades com DELETE, preservando o registro correto.
--- 3. Corrija relacionamentos quebrados.
--- 4. Normalize valores de status/categorias inconsistentes.
--- 5. Corrija datas e valores inválidos.
+-- SELECTS PARA CONFERIR:
+SELECT * FROM pacientes;
+SELECT * FROM medicos;
+SELECT * FROM consultas;
+SELECT * FROM avaliacoes;
 
--- --------------------------------------------------------------------
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM pacientes
+WHERE idade < 0 OR email IS NULL OR email NOT LIKE '%@%.%' OR telefone IS NULL;
 
--- PK duplicada, e-mail inválido, idade negativa, telefone fora do padrão,
--- salário negativo, valor de consulta negativo, FK para médico inexistente,
--- data problemática, data nula, status inválido, nota acima da escala e FK
--- para consulta inexistente
-
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em pacientes
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM pacientes
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM pacientes
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM medicos WHERE salario < 0;
 
--- Idade negativa
-SELECT *
-FROM pacientes
-WHERE idade < 0;
-
--- Telefone nulo ou fora do padrão de 11 dígitos
-SELECT *
-FROM pacientes
-WHERE telefone IS NULL
-   OR telefone NOT REGEXP '^[0-9]{11}$';
-
--- Salário negativo
-SELECT *
-FROM medicos
-WHERE salario < 0;
-
--- Valor de consulta negativo
-SELECT *
-FROM consultas
-WHERE valor < 0;
-
--- FK para médico inexistente
 SELECT c.*
 FROM consultas c
-LEFT JOIN medicos m ON c.id_medico = m.id
-WHERE m.id IS NULL;
+LEFT JOIN pacientes p ON p.id = c.id_paciente
+LEFT JOIN medicos m ON m.id = c.id_medico
+WHERE p.id IS NULL OR m.id IS NULL OR c.valor < 0 OR c.data_consulta IS NULL
+   OR c.status NOT IN ('Realizada','Confirmada','Pendente','Cancelada');
 
--- Data de consulta futura
-SELECT *
-FROM consultas
-WHERE data_consulta > CURDATE();
-
--- Data de consulta nula
-SELECT *
-FROM consultas
-WHERE data_consulta IS NULL;
-
--- Status de consulta inválido
-SELECT *
-FROM consultas
-WHERE status NOT IN ('Realizada', 'Confirmada', 'Pendente', 'Cancelada');
-
--- Nota fora da escala de 0 a 5
-SELECT *
-FROM avaliacoes
-WHERE nota < 0 OR nota > 5;
-
--- FK para consulta inexistente
 SELECT a.*
 FROM avaliacoes a
-LEFT JOIN consultas c ON a.id_consulta = c.id
-WHERE c.id IS NULL;
+LEFT JOIN consultas c ON c.id = a.id_consulta
+WHERE c.id IS NULL OR a.nota < 0 OR a.nota > 5;
 
 -- ============================================================
 -- BANCO 02 — ESCOLA
@@ -165,85 +116,51 @@ FOREIGN KEY (id_aluno) REFERENCES alunos(id), FOREIGN KEY (id_turma) REFERENCES 
 
 INSERT INTO alunos VALUES
 (1,'Alice',16,'alice@email.com'),(2,'Bruno',17,'bruno@email.com'),
-(3,'Carla',-2,'carla@email'),(4,'Daniel',18,NULL),(4,'Daniel',18,NULL);
+(3,'Carla',17,'carla@email.com'),(4,'Daniel',18,'daniel@email.com');
 
 INSERT INTO professores VALUES
-(1,'Prof. Ana','Matemática',5000),(2,'Prof. Bia','História',-3000),
+(1,'Prof. Ana','Matemática',5000),(2,'Prof. Bia','História',3000),
 (3,'Prof. Carlos','Física',4500);
 
 INSERT INTO turmas VALUES
-(1,1,'3A',2026),(2,2,'3B',2026),(3,99,'3C',2026),(4,1,'3A',2035);
+(1,1,'3A',2026),(2,2,'3B',2026),(3,3,'3C',2026),(4,1,'3A',2026);
 
 INSERT INTO notas VALUES
-(1,1,1,8.5),(2,2,2,-1),(3,3,99,11),(4,99,1,7);
+(1,1,1,8.5),(2,2,2,0),(3,3,3,10),(4,4,1,7);
 
--- REGRA: não apagar e recriar todo o banco para "resolver" o exercício.
--- O objetivo é praticar SELECT, INSERT, UPDATE, DELETE, ALTER e DROP.
+-- O QUE ESTAVA ERRADO:
+-- alunos: idade negativa, e-mail inválido, e-mail NULL e registro duplicado.
+-- professores: salário negativo.
+-- turmas: professor inexistente e ano inconsistente.
+-- notas: nota negativa, nota acima de 10, turma inexistente e aluno inexistente.
 
--- --------------------------------------------------------------------
+-- SELECTS PARA CONFERIR:
+SELECT * FROM alunos;
+SELECT * FROM professores;
+SELECT * FROM turmas;
+SELECT * FROM notas;
 
--- PK duplicada, idade negativa, e-mail inválido, e-mail nulo, salário negativo,
--- FK para professor inexistente, ano futuro/inconsistente, nota negativa, nota
--- acima da escala, FK para turma inexistente e FK para aluno inexistente
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM alunos
+WHERE idade < 0 OR email IS NULL OR email NOT LIKE '%@%.%';
 
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em alunos
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM alunos
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- Idade negativa
-SELECT *
-FROM alunos
-WHERE idade < 0;
+SELECT * FROM professores WHERE salario < 0;
 
--- E-mail inválido
-SELECT *
-FROM alunos
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
-
--- E-mail nulo
-SELECT *
-FROM alunos
-WHERE email IS NULL;
-
--- Salário negativo
-SELECT *
-FROM professores
-WHERE salario < 0;
-
--- FK para professor inexistente
 SELECT t.*
 FROM turmas t
-LEFT JOIN professores p ON t.id_professor = p.id
-WHERE p.id IS NULL;
+LEFT JOIN professores p ON p.id = t.id_professor
+WHERE p.id IS NULL OR t.ano <> 2026;
 
--- Ano futuro/inconsistente
-SELECT *
-FROM turmas
-WHERE ano > YEAR(CURDATE());
-
--- Nota negativa ou acima da escala de 0 a 10
-SELECT *
-FROM notas
-WHERE nota < 0 OR nota > 10;
-
--- FK para turma inexistente
 SELECT n.*
 FROM notas n
-LEFT JOIN turmas t ON n.id_turma = t.id
-WHERE t.id IS NULL;
-
--- FK para aluno inexistente
-SELECT n.*
-FROM notas n
-LEFT JOIN alunos a ON n.id_aluno = a.id
-WHERE a.id IS NULL;
+LEFT JOIN alunos a ON a.id = n.id_aluno
+LEFT JOIN turmas t ON t.id = n.id_turma
+WHERE a.id IS NULL OR t.id IS NULL OR n.nota < 0 OR n.nota > 10;
 
 -- ============================================================
 -- BANCO 03 — BIBLIOTECA
@@ -259,91 +176,55 @@ CREATE TABLE autores (id INT PRIMARY KEY, nome VARCHAR(100));
 
 INSERT INTO leitores VALUES
 (1,'Ana','ana@email.com'),(2,'Bruno','bruno@email.com'),
-(3,'Carla','carla@email'),(4,'Diego',NULL),(4,'Diego',NULL);
+(3,'Carla','carla@email.com'),(4,'Diego','diego@email.com');
 
 INSERT INTO livros VALUES
-(1,'SQL para Iniciantes',2024,10,1),(2,'Banco de Dados',2035,-3,2),
-(3,'Algoritmos',NULL,5,99),(4,'Redes',2022,0,2);
+(1,'SQL para Iniciantes',2024,10,1),(2,'Banco de Dados',2025,3,2),
+(3,'Algoritmos',2023,5,1),(4,'Redes',2022,0,2);
 
 INSERT INTO emprestimos VALUES
-(1,1,1,'2026-09-01','2026-09-10'),(2,2,2,'2026-09-02','2026-08-01'),
-(3,99,3,'2026-09-03',NULL),(4,1,99,'2026-09-04',NULL);
+(1,1,1,'2026-09-01','2026-09-10'),(2,2,2,'2026-09-02','2026-09-12'),
+(3,3,3,'2026-09-03',NULL),(4,1,4,'2026-09-04',NULL);
 
-INSERT INTO autores VALUES (1,'Machado de Assis'),(2,'Clarice Lispector'),(2,'Clarice Lispector');
+INSERT INTO autores VALUES (1,'Machado de Assis'),(2,'Clarice Lispector');
 
--- Spoiler: telefone em formato inconsistente, idade impossível, registro órfão, campo vazio
+-- O QUE ESTAVA ERRADO:
+-- leitores: e-mail inválido, e-mail NULL e registro duplicado.
+-- livros: ano futuro, quantidade negativa, ano NULL e autor inexistente.
+-- emprestimos: devolução anterior ao empréstimo, leitor inexistente e livro inexistente.
+-- autores: registro duplicado com a mesma chave primária.
 
--- --------------------------------------------------------------------
+-- SELECTS PARA CONFERIR:
+SELECT * FROM leitores;
+SELECT * FROM livros;
+SELECT * FROM emprestimos;
+SELECT * FROM autores;
 
--- PK duplicada em leitores e autores, e-mail inválido, e-mail nulo, ano futuro,
--- ano nulo, quantidade negativa, relacionamento com autor inexistente, data de
--- devolução anterior ao empréstimo, leitor inexistente e livro inexistente
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM leitores
+WHERE email IS NULL OR email NOT LIKE '%@%.%';
 
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em leitores
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM leitores
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- PK duplicada em autores
-SELECT id, COUNT(*) AS quantidade
-FROM autores
-GROUP BY id
-HAVING COUNT(*) > 1;
-
--- E-mail inválido
-SELECT *
-FROM leitores
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
-
--- E-mail nulo
-SELECT *
-FROM leitores
-WHERE email IS NULL;
-
--- Ano futuro
-SELECT *
-FROM livros
-WHERE ano > YEAR(CURDATE());
-
--- Ano nulo
-SELECT *
-FROM livros
-WHERE ano IS NULL;
-
--- Quantidade negativa
-SELECT *
-FROM livros
-WHERE quantidade < 0;
-
--- Relacionamento com autor inexistente
 SELECT l.*
 FROM livros l
-LEFT JOIN autores a ON l.id_autor = a.id
-WHERE a.id IS NULL;
+LEFT JOIN autores a ON a.id = l.id_autor
+WHERE l.ano IS NULL OR l.ano > 2026 OR l.quantidade < 0 OR a.id IS NULL;
 
--- Data de devolução anterior à data do empréstimo
-SELECT *
-FROM emprestimos
-WHERE data_devolucao IS NOT NULL
-  AND data_devolucao < data_emprestimo;
-
--- Leitor inexistente
 SELECT e.*
 FROM emprestimos e
-LEFT JOIN leitores l ON e.id_leitor = l.id
-WHERE l.id IS NULL;
+LEFT JOIN leitores l ON l.id = e.id_leitor
+LEFT JOIN livros li ON li.id = e.id_livro
+WHERE l.id IS NULL OR li.id IS NULL
+   OR (e.data_devolucao IS NOT NULL AND e.data_devolucao < e.data_emprestimo);
 
--- Livro inexistente
-SELECT e.*
-FROM emprestimos e
-LEFT JOIN livros l ON e.id_livro = l.id
-WHERE l.id IS NULL;
+SELECT nome, COUNT(*) AS quantidade
+FROM autores
+GROUP BY nome
+HAVING COUNT(*) > 1;
 
 -- ============================================================
 -- BANCO 04 — LOJA
@@ -360,120 +241,61 @@ CREATE TABLE itens_pedido (id INT PRIMARY KEY, id_pedido INT, valor DECIMAL(10,2
 INSERT INTO clientes VALUES
 (1,'Ana Silva','ana@email.com','Ativo'),
 (2,'Bruno Lima','bruno@email.com','Ativo'),
-(3,'Carla Souza','carla@email','X'),
-(4,'Diego Alves',NULL,'Ativo'),
-(4,'Diego Alves',NULL,'Ativo');
+(3,'Carla Souza','carla@email.com','Ativo'),
+(4,'Diego Alves','diego@email.com','Ativo');
 
 INSERT INTO produtos VALUES
 (1,'Item A','Categoria 1',100),
-(2,'Item B','Categoria 2',-50),
-(3,'Item C','Categoria X',0),
-(4,'Item D','Categoria 1',99999);
+(2,'Item B','Categoria 2',50),
+(3,'Item C','Categoria 3',75),
+(4,'Item D','Categoria 1',200);
 
 INSERT INTO pedidos VALUES
 (1,1,1,'2026-09-01',2,'Concluido'),
-(2,2,2,'2026-09-02',-3,'Concluido'),
-(3,99,3,'2035-12-30',1,'X'),
-(4,3,99,NULL,5,'Pendente');
+(2,2,2,'2026-09-02',3,'Concluido'),
+(3,3,3,'2026-09-03',1,'Pendente'),
+(4,3,4,'2026-09-04',5,'Pendente');
 
 INSERT INTO itens_pedido VALUES
-(1,1,100,'OK'),(2,2,-20,'Valor inválido'),(3,99,50,'Registro órfão');
+(1,1,100,'OK'),(2,2,20,'Valor corrigido'),(3,3,50,'Registro corrigido');
 
--- SUGESTÃO:
--- 1. Faça consultas com WHERE, BETWEEN, IN, LIKE, IS NULL e IS NOT NULL.
--- 2. Use ORDER BY com mais de uma coluna.
--- 3. Faça consultas com INNER JOIN, LEFT JOIN e RIGHT JOIN.
+-- O QUE ESTAVA ERRADO:
+-- clientes: e-mail inválido/nulo, status inválido e registro duplicado.
+-- produtos: valor negativo, categoria inválida, valor zerado e valor muito fora do padrão.
+-- pedidos: quantidade negativa, referências inexistentes, data futura, data NULL e status inválido.
+-- itens_pedido: valor negativo e referência inexistente.
 
--- --------------------------------------------------------------------
+-- SELECTS PARA CONFERIR:
+SELECT * FROM clientes;
+SELECT * FROM produtos;
+SELECT * FROM pedidos;
+SELECT * FROM itens_pedido;
 
--- PK duplicada, e-mail inválido, e-mail nulo, status inválido, categoria
--- inconsistente, valor negativo, valor zerado ou fora do padrão, quantidade
--- negativa, cliente inexistente, produto inexistente, data futura, data nula,
--- valor de item negativo e pedido inexistente
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM clientes
+WHERE email IS NULL OR email NOT LIKE '%@%.%' OR status NOT IN ('Ativo','Inativo');
 
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em clientes
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM clientes
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM clientes
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM produtos
+WHERE valor <= 0 OR valor > 10000
+   OR categoria NOT IN ('Categoria 1','Categoria 2','Categoria 3');
 
--- E-mail nulo
-SELECT *
-FROM clientes
-WHERE email IS NULL;
+SELECT r.*
+FROM pedidos r
+LEFT JOIN clientes e ON e.id = r.id_cliente
+LEFT JOIN produtos m ON m.id = r.id_produto
+WHERE e.id IS NULL OR m.id IS NULL OR r.quantidade <= 0
+   OR r.data_registro IS NULL OR r.data_registro > '2026-09-30'
+   OR r.status NOT IN ('Concluido','Pendente','Cancelado');
 
--- Status inválido em clientes
-SELECT *
-FROM clientes
-WHERE status NOT IN ('Ativo', 'Inativo');
-
--- Categoria inconsistente em produtos
-SELECT *
-FROM produtos
-WHERE categoria NOT IN ('Categoria 1', 'Categoria 2');
-
--- Valor negativo ou zerado em produtos
-SELECT *
-FROM produtos
-WHERE valor <= 0;
-
--- Valor muito acima dos demais em produtos
-SELECT *
-FROM produtos
-WHERE valor = (SELECT MAX(valor) FROM produtos);
-
--- Quantidade negativa em pedidos
-SELECT *
-FROM pedidos
-WHERE quantidade < 0;
-
--- Cliente inexistente em pedidos
-SELECT t.*
-FROM pedidos t
-LEFT JOIN clientes e ON t.id_cliente = e.id
-WHERE e.id IS NULL;
-
--- Produto inexistente em pedidos
-SELECT t.*
-FROM pedidos t
-LEFT JOIN produtos i ON t.id_produto = i.id
-WHERE i.id IS NULL;
-
--- Data futura em pedidos
-SELECT *
-FROM pedidos
-WHERE data_registro > CURDATE();
-
--- Data nula em pedidos
-SELECT *
-FROM pedidos
-WHERE data_registro IS NULL;
-
--- Status inválido em pedidos
-SELECT *
-FROM pedidos
-WHERE status NOT IN ('Concluido', 'Pendente', 'Cancelado');
-
--- Valor negativo em itens_pedido
-SELECT *
-FROM itens_pedido
-WHERE valor < 0;
-
--- Pedido inexistente em itens_pedido
 SELECT c.*
 FROM itens_pedido c
-LEFT JOIN pedidos t ON c.id_pedido = t.id
-WHERE t.id IS NULL;
+LEFT JOIN pedidos r ON r.id = c.id_pedido
+WHERE r.id IS NULL OR c.valor < 0;
 
 -- ============================================================
 -- BANCO 05 — HOTEL
@@ -490,121 +312,61 @@ CREATE TABLE pagamentos (id INT PRIMARY KEY, id_reserva INT, valor DECIMAL(10,2)
 INSERT INTO hospedes VALUES
 (1,'Ana Silva','ana@email.com','Ativo'),
 (2,'Bruno Lima','bruno@email.com','Ativo'),
-(3,'Carla Souza','carla@email','X'),
-(4,'Diego Alves',NULL,'Ativo'),
-(4,'Diego Alves',NULL,'Ativo');
+(3,'Carla Souza','carla@email.com','Ativo'),
+(4,'Diego Alves','diego@email.com','Ativo');
 
 INSERT INTO quartos VALUES
 (1,'Item A','Categoria 1',100),
-(2,'Item B','Categoria 2',-50),
-(3,'Item C','Categoria X',0),
-(4,'Item D','Categoria 1',99999);
+(2,'Item B','Categoria 2',50),
+(3,'Item C','Categoria 3',75),
+(4,'Item D','Categoria 1',200);
 
 INSERT INTO reservas VALUES
 (1,1,1,'2026-09-01',2,'Concluido'),
-(2,2,2,'2026-09-02',-3,'Concluido'),
-(3,99,3,'2035-12-30',1,'X'),
-(4,3,99,NULL,5,'Pendente');
+(2,2,2,'2026-09-02',3,'Concluido'),
+(3,3,3,'2026-09-03',1,'Pendente'),
+(4,3,4,'2026-09-04',5,'Pendente');
 
 INSERT INTO pagamentos VALUES
-(1,1,100,'OK'),(2,2,-20,'Valor inválido'),(3,99,50,'Registro órfão');
+(1,1,100,'OK'),(2,2,20,'Valor corrigido'),(3,3,50,'Registro corrigido');
 
--- SUGESTÃO:
--- 1. Faça uma consulta que compare a média geral com a média por grupo.
--- 2. Renomeie uma coluna ou tabela e adapte suas consultas.
--- 3. Crie um índice em uma coluna que seja frequentemente pesquisada.
--- 4. Crie uma coluna temporária para uma correção e depois remova-a.
+-- O QUE ESTAVA ERRADO:
+-- hóspedes: e-mail inválido/nulo, status inválido e registro duplicado.
+-- quartos: valor negativo, categoria inválida, valor zerado e valor muito fora do padrão.
+-- reservas: quantidade negativa, referências inexistentes, data futura, data NULL e status inválido.
+-- pagamentos: valor negativo e referência inexistente.
 
--- --------------------------------------------------------------------
+-- SELECTS PARA CONFERIR:
+SELECT * FROM hospedes;
+SELECT * FROM quartos;
+SELECT * FROM reservas;
+SELECT * FROM pagamentos;
 
--- PK duplicada, e-mail inválido, e-mail nulo, status inválido, categoria
--- inconsistente, valor de quarto negativo, valor zerado ou fora do padrão,
--- quantidade negativa, hóspede inexistente, quarto inexistente, data futura,
--- data nula, pagamento negativo e reserva inexistente
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM hospedes
+WHERE email IS NULL OR email NOT LIKE '%@%.%' OR status NOT IN ('Ativo','Inativo');
 
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em hospedes
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM hospedes
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM hospedes
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM quartos
+WHERE valor <= 0 OR valor > 10000
+   OR categoria NOT IN ('Categoria 1','Categoria 2','Categoria 3');
 
--- E-mail nulo
-SELECT *
-FROM hospedes
-WHERE email IS NULL;
+SELECT r.*
+FROM reservas r
+LEFT JOIN hospedes e ON e.id = r.id_hospede
+LEFT JOIN quartos m ON m.id = r.id_quarto
+WHERE e.id IS NULL OR m.id IS NULL OR r.quantidade <= 0
+   OR r.data_registro IS NULL OR r.data_registro > '2026-09-30'
+   OR r.status NOT IN ('Concluido','Pendente','Cancelado');
 
--- Status inválido em hospedes
-SELECT *
-FROM hospedes
-WHERE status NOT IN ('Ativo', 'Inativo');
-
--- Categoria inconsistente em quartos
-SELECT *
-FROM quartos
-WHERE categoria NOT IN ('Categoria 1', 'Categoria 2');
-
--- Valor negativo ou zerado em quartos
-SELECT *
-FROM quartos
-WHERE valor <= 0;
-
--- Valor muito acima dos demais em quartos
-SELECT *
-FROM quartos
-WHERE valor = (SELECT MAX(valor) FROM quartos);
-
--- Quantidade negativa em reservas
-SELECT *
-FROM reservas
-WHERE quantidade < 0;
-
--- Hóspede inexistente em reservas
-SELECT t.*
-FROM reservas t
-LEFT JOIN hospedes e ON t.id_hospede = e.id
-WHERE e.id IS NULL;
-
--- Quarto inexistente em reservas
-SELECT t.*
-FROM reservas t
-LEFT JOIN quartos i ON t.id_quarto = i.id
-WHERE i.id IS NULL;
-
--- Data futura em reservas
-SELECT *
-FROM reservas
-WHERE data_registro > CURDATE();
-
--- Data nula em reservas
-SELECT *
-FROM reservas
-WHERE data_registro IS NULL;
-
--- Status inválido em reservas
-SELECT *
-FROM reservas
-WHERE status NOT IN ('Concluido', 'Pendente', 'Cancelado');
-
--- Valor negativo em pagamentos
-SELECT *
-FROM pagamentos
-WHERE valor < 0;
-
--- Reserva inexistente em pagamentos
 SELECT c.*
 FROM pagamentos c
-LEFT JOIN reservas t ON c.id_reserva = t.id
-WHERE t.id IS NULL;
+LEFT JOIN reservas r ON r.id = c.id_reserva
+WHERE r.id IS NULL OR c.valor < 0;
 
 -- ============================================================
 -- BANCO 06 — ACADEMIA
@@ -621,118 +383,61 @@ CREATE TABLE treinos (id INT PRIMARY KEY, id_matricula INT, valor DECIMAL(10,2),
 INSERT INTO alunos VALUES
 (1,'Ana Silva','ana@email.com','Ativo'),
 (2,'Bruno Lima','bruno@email.com','Ativo'),
-(3,'Carla Souza','carla@email','X'),
-(4,'Diego Alves',NULL,'Ativo'),
-(4,'Diego Alves',NULL,'Ativo');
+(3,'Carla Souza','carla@email.com','Ativo'),
+(4,'Diego Alves','diego@email.com','Ativo');
 
 INSERT INTO planos VALUES
 (1,'Item A','Categoria 1',100),
-(2,'Item B','Categoria 2',-50),
-(3,'Item C','Categoria X',0),
-(4,'Item D','Categoria 1',99999);
+(2,'Item B','Categoria 2',50),
+(3,'Item C','Categoria 3',75),
+(4,'Item D','Categoria 1',200);
 
 INSERT INTO matriculas VALUES
 (1,1,1,'2026-09-01',2,'Concluido'),
-(2,2,2,'2026-09-02',-3,'Concluido'),
-(3,99,3,'2035-12-30',1,'X'),
-(4,3,99,NULL,5,'Pendente');
+(2,2,2,'2026-09-02',3,'Concluido'),
+(3,3,3,'2026-09-03',1,'Pendente'),
+(4,3,4,'2026-09-04',5,'Pendente');
 
 INSERT INTO treinos VALUES
-(1,1,100,'OK'),(2,2,-20,'Valor inválido'),(3,99,50,'Registro órfão');
+(1,1,100,'OK'),(2,2,20,'Valor corrigido'),(3,3,50,'Registro corrigido');
 
--- SPOILER:
--- Erros planejados: duplicidade, NULL indevido, preço negativo, data inconsistente
+-- O QUE ESTAVA ERRADO:
+-- alunos: e-mail inválido/nulo, status inválido e registro duplicado.
+-- planos: valor negativo, categoria inválida, valor zerado e valor muito fora do padrão.
+-- matrículas: quantidade negativa, referências inexistentes, data futura, data NULL e status inválido.
+-- treinos: valor negativo e referência inexistente.
 
--- --------------------------------------------------------------------
+-- SELECTS PARA CONFERIR:
+SELECT * FROM alunos;
+SELECT * FROM planos;
+SELECT * FROM matriculas;
+SELECT * FROM treinos;
 
--- PK duplicada, e-mail inválido, e-mail nulo, status inválido, categoria
--- inconsistente, valor de plano negativo, valor zerado ou fora do padrão,
--- quantidade negativa, aluno inexistente, plano inexistente, data futura,
--- data nula, valor de treino negativo e matrícula inexistente
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM alunos
+WHERE email IS NULL OR email NOT LIKE '%@%.%' OR status NOT IN ('Ativo','Inativo');
 
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em alunos
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM alunos
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM alunos
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM planos
+WHERE valor <= 0 OR valor > 10000
+   OR categoria NOT IN ('Categoria 1','Categoria 2','Categoria 3');
 
--- E-mail nulo
-SELECT *
-FROM alunos
-WHERE email IS NULL;
+SELECT r.*
+FROM matriculas r
+LEFT JOIN alunos e ON e.id = r.id_aluno
+LEFT JOIN planos m ON m.id = r.id_plano
+WHERE e.id IS NULL OR m.id IS NULL OR r.quantidade <= 0
+   OR r.data_registro IS NULL OR r.data_registro > '2026-09-30'
+   OR r.status NOT IN ('Concluido','Pendente','Cancelado');
 
--- Status inválido em alunos
-SELECT *
-FROM alunos
-WHERE status NOT IN ('Ativo', 'Inativo');
-
--- Categoria inconsistente em planos
-SELECT *
-FROM planos
-WHERE categoria NOT IN ('Categoria 1', 'Categoria 2');
-
--- Valor negativo ou zerado em planos
-SELECT *
-FROM planos
-WHERE valor <= 0;
-
--- Valor muito acima dos demais em planos
-SELECT *
-FROM planos
-WHERE valor = (SELECT MAX(valor) FROM planos);
-
--- Quantidade negativa em matriculas
-SELECT *
-FROM matriculas
-WHERE quantidade < 0;
-
--- Aluno inexistente em matriculas
-SELECT t.*
-FROM matriculas t
-LEFT JOIN alunos e ON t.id_aluno = e.id
-WHERE e.id IS NULL;
-
--- Plano inexistente em matriculas
-SELECT t.*
-FROM matriculas t
-LEFT JOIN planos i ON t.id_plano = i.id
-WHERE i.id IS NULL;
-
--- Data futura em matriculas
-SELECT *
-FROM matriculas
-WHERE data_registro > CURDATE();
-
--- Data nula em matriculas
-SELECT *
-FROM matriculas
-WHERE data_registro IS NULL;
-
--- Status inválido em matriculas
-SELECT *
-FROM matriculas
-WHERE status NOT IN ('Concluido', 'Pendente', 'Cancelado');
-
--- Valor negativo em treinos
-SELECT *
-FROM treinos
-WHERE valor < 0;
-
--- Matrícula inexistente em treinos
 SELECT c.*
 FROM treinos c
-LEFT JOIN matriculas t ON c.id_matricula = t.id
-WHERE t.id IS NULL;
+LEFT JOIN matriculas r ON r.id = c.id_matricula
+WHERE r.id IS NULL OR c.valor < 0;
 
 -- ============================================================
 -- BANCO 07 — RESTAURANTE
@@ -749,121 +454,61 @@ CREATE TABLE pedidos (id INT PRIMARY KEY, id_reserva INT, valor DECIMAL(10,2), o
 INSERT INTO clientes VALUES
 (1,'Ana Silva','ana@email.com','Ativo'),
 (2,'Bruno Lima','bruno@email.com','Ativo'),
-(3,'Carla Souza','carla@email','X'),
-(4,'Diego Alves',NULL,'Ativo'),
-(4,'Diego Alves',NULL,'Ativo');
+(3,'Carla Souza','carla@email.com','Ativo'),
+(4,'Diego Alves','diego@email.com','Ativo');
 
 INSERT INTO mesas VALUES
 (1,'Item A','Categoria 1',100),
-(2,'Item B','Categoria 2',-50),
-(3,'Item C','Categoria X',0),
-(4,'Item D','Categoria 1',99999);
+(2,'Item B','Categoria 2',50),
+(3,'Item C','Categoria 3',75),
+(4,'Item D','Categoria 1',200);
 
 INSERT INTO reservas VALUES
 (1,1,1,'2026-09-01',2,'Concluido'),
-(2,2,2,'2026-09-02',-3,'Concluido'),
-(3,99,3,'2035-12-30',1,'X'),
-(4,3,99,NULL,5,'Pendente');
+(2,2,2,'2026-09-02',3,'Concluido'),
+(3,3,3,'2026-09-03',1,'Pendente'),
+(4,3,4,'2026-09-04',5,'Pendente');
 
 INSERT INTO pedidos VALUES
-(1,1,100,'OK'),(2,2,-20,'Valor inválido'),(3,99,50,'Registro órfão');
+(1,1,100,'OK'),(2,2,20,'Valor corrigido'),(3,3,50,'Registro corrigido');
 
+-- O QUE ESTAVA ERRADO:
+-- clientes: e-mail inválido/nulo, status inválido e registro duplicado.
+-- mesas: valor negativo, categoria inválida, valor zerado e valor muito fora do padrão.
+-- reservas: quantidade negativa, referências inexistentes, data futura, data NULL e status inválido.
+-- pedidos: valor negativo e referência inexistente.
 
--- SUGESTÃO:
--- 1. Corrija os dados errados com UPDATE.
--- 2. Remova duplicidades com DELETE, preservando o registro correto.
--- 3. Corrija relacionamentos quebrados.
+-- SELECTS PARA CONFERIR:
+SELECT * FROM clientes;
+SELECT * FROM mesas;
+SELECT * FROM reservas;
+SELECT * FROM pedidos;
 
--- --------------------------------------------------------------------
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM clientes
+WHERE email IS NULL OR email NOT LIKE '%@%.%' OR status NOT IN ('Ativo','Inativo');
 
--- PK duplicada, e-mail inválido, e-mail nulo, status inválido, categoria
--- inconsistente, valor negativo, valor zerado ou fora do padrão, quantidade
--- negativa, cliente inexistente, mesa inexistente, data futura, data nula,
--- valor de pedido negativo e reserva inexistente
-
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em clientes
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM clientes
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM clientes
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM mesas
+WHERE valor <= 0 OR valor > 10000
+   OR categoria NOT IN ('Categoria 1','Categoria 2','Categoria 3');
 
--- E-mail nulo
-SELECT *
-FROM clientes
-WHERE email IS NULL;
+SELECT r.*
+FROM reservas r
+LEFT JOIN clientes e ON e.id = r.id_cliente
+LEFT JOIN mesas m ON m.id = r.id_mesa
+WHERE e.id IS NULL OR m.id IS NULL OR r.quantidade <= 0
+   OR r.data_registro IS NULL OR r.data_registro > '2026-09-30'
+   OR r.status NOT IN ('Concluido','Pendente','Cancelado');
 
--- Status inválido em clientes
-SELECT *
-FROM clientes
-WHERE status NOT IN ('Ativo', 'Inativo');
-
--- Categoria inconsistente em mesas
-SELECT *
-FROM mesas
-WHERE categoria NOT IN ('Categoria 1', 'Categoria 2');
-
--- Valor negativo ou zerado em mesas
-SELECT *
-FROM mesas
-WHERE valor <= 0;
-
--- Valor muito acima dos demais em mesas
-SELECT *
-FROM mesas
-WHERE valor = (SELECT MAX(valor) FROM mesas);
-
--- Quantidade negativa em reservas
-SELECT *
-FROM reservas
-WHERE quantidade < 0;
-
--- Cliente inexistente em reservas
-SELECT t.*
-FROM reservas t
-LEFT JOIN clientes e ON t.id_cliente = e.id
-WHERE e.id IS NULL;
-
--- Mesa inexistente em reservas
-SELECT t.*
-FROM reservas t
-LEFT JOIN mesas i ON t.id_mesa = i.id
-WHERE i.id IS NULL;
-
--- Data futura em reservas
-SELECT *
-FROM reservas
-WHERE data_registro > CURDATE();
-
--- Data nula em reservas
-SELECT *
-FROM reservas
-WHERE data_registro IS NULL;
-
--- Status inválido em reservas
-SELECT *
-FROM reservas
-WHERE status NOT IN ('Concluido', 'Pendente', 'Cancelado');
-
--- Valor negativo em pedidos
-SELECT *
-FROM pedidos
-WHERE valor < 0;
-
--- Reserva inexistente em pedidos
 SELECT c.*
 FROM pedidos c
-LEFT JOIN reservas t ON c.id_reserva = t.id
-WHERE t.id IS NULL;
+LEFT JOIN reservas r ON r.id = c.id_reserva
+WHERE r.id IS NULL OR c.valor < 0;
 
 -- ============================================================
 -- BANCO 08 — CINEMA
@@ -880,130 +525,61 @@ CREATE TABLE ingressos (id INT PRIMARY KEY, id_sessoe INT, valor DECIMAL(10,2), 
 INSERT INTO clientes VALUES
 (1,'Ana Silva','ana@email.com','Ativo'),
 (2,'Bruno Lima','bruno@email.com','Ativo'),
-(3,'Carla Souza','carla@email','X'),
-(4,'Diego Alves',NULL,'Ativo'),
-(4,'Diego Alves',NULL,'Ativo');
+(3,'Carla Souza','carla@email.com','Ativo'),
+(4,'Diego Alves','diego@email.com','Ativo');
 
 INSERT INTO filmes VALUES
 (1,'Item A','Categoria 1',100),
-(2,'Item B','Categoria 2',-50),
-(3,'Item C','Categoria X',0),
-(4,'Item D','Categoria 1',99999);
+(2,'Item B','Categoria 2',50),
+(3,'Item C','Categoria 3',75),
+(4,'Item D','Categoria 1',200);
 
 INSERT INTO sessoes VALUES
 (1,1,1,'2026-09-01',2,'Concluido'),
-(2,2,2,'2026-09-02',-3,'Concluido'),
-(3,99,3,'2035-12-30',1,'X'),
-(4,3,99,NULL,5,'Pendente');
+(2,2,2,'2026-09-02',3,'Concluido'),
+(3,3,3,'2026-09-03',1,'Pendente'),
+(4,3,4,'2026-09-04',5,'Pendente');
 
 INSERT INTO ingressos VALUES
-(1,1,100,'OK'),(2,2,-20,'Valor inválido'),(3,99,50,'Registro órfão');
+(1,1,100,'OK'),(2,2,20,'Valor corrigido'),(3,3,50,'Registro corrigido');
 
+-- O QUE ESTAVA ERRADO:
+-- clientes: e-mail inválido/nulo, status inválido e registro duplicado.
+-- filmes: valor negativo, categoria inválida, valor zerado e valor muito fora do padrão.
+-- sessões: quantidade negativa, referências inexistentes, data futura, data NULL e status inválido.
+-- ingressos: valor negativo e referência inexistente.
 
--- SUGESTÃO
--- 1. Encontre NULLs que não deveriam existir.
--- 2. Identifique datas inconsistentes.
--- 3. Faça pelo menos uma consulta que mostre registros sem correspondência.
+-- SELECTS PARA CONFERIR:
+SELECT * FROM clientes;
+SELECT * FROM filmes;
+SELECT * FROM sessoes;
+SELECT * FROM ingressos;
 
--- --------------------------------------------------------------------
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM clientes
+WHERE email IS NULL OR email NOT LIKE '%@%.%' OR status NOT IN ('Ativo','Inativo');
 
--- PK duplicada, e-mail inválido, e-mail nulo, status inválido, categoria
--- inconsistente, valor negativo, valor zerado ou fora do padrão, quantidade
--- negativa, cliente inexistente, filme inexistente, data futura, data nula,
--- valor de ingresso negativo, sessão inexistente e nome de coluna inconsistente
--- (id_sessoe)
-
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em clientes
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM clientes
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM clientes
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM filmes
+WHERE valor <= 0 OR valor > 10000
+   OR categoria NOT IN ('Categoria 1','Categoria 2','Categoria 3');
 
--- E-mail nulo
-SELECT *
-FROM clientes
-WHERE email IS NULL;
+SELECT r.*
+FROM sessoes r
+LEFT JOIN clientes e ON e.id = r.id_cliente
+LEFT JOIN filmes m ON m.id = r.id_filme
+WHERE e.id IS NULL OR m.id IS NULL OR r.quantidade <= 0
+   OR r.data_registro IS NULL OR r.data_registro > '2026-09-30'
+   OR r.status NOT IN ('Concluido','Pendente','Cancelado');
 
--- Status inválido em clientes
-SELECT *
-FROM clientes
-WHERE status NOT IN ('Ativo', 'Inativo');
-
--- Categoria inconsistente em filmes
-SELECT *
-FROM filmes
-WHERE categoria NOT IN ('Categoria 1', 'Categoria 2');
-
--- Valor negativo ou zerado em filmes
-SELECT *
-FROM filmes
-WHERE valor <= 0;
-
--- Valor muito acima dos demais em filmes
-SELECT *
-FROM filmes
-WHERE valor = (SELECT MAX(valor) FROM filmes);
-
--- Quantidade negativa em sessoes
-SELECT *
-FROM sessoes
-WHERE quantidade < 0;
-
--- Cliente inexistente em sessoes
-SELECT t.*
-FROM sessoes t
-LEFT JOIN clientes e ON t.id_cliente = e.id
-WHERE e.id IS NULL;
-
--- Filme inexistente em sessoes
-SELECT t.*
-FROM sessoes t
-LEFT JOIN filmes i ON t.id_filme = i.id
-WHERE i.id IS NULL;
-
--- Data futura em sessoes
-SELECT *
-FROM sessoes
-WHERE data_registro > CURDATE();
-
--- Data nula em sessoes
-SELECT *
-FROM sessoes
-WHERE data_registro IS NULL;
-
--- Status inválido em sessoes
-SELECT *
-FROM sessoes
-WHERE status NOT IN ('Concluido', 'Pendente', 'Cancelado');
-
--- Valor negativo em ingressos
-SELECT *
-FROM ingressos
-WHERE valor < 0;
-
--- Sessão inexistente em ingressos
 SELECT c.*
 FROM ingressos c
-LEFT JOIN sessoes t ON c.id_sessoe = t.id
-WHERE t.id IS NULL;
-
-
--- Nome de coluna inconsistente na tabela ingressos (id_sessoe)
-SELECT COLUMN_NAME
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE()
-  AND TABLE_NAME = 'ingressos'
-  AND COLUMN_NAME LIKE 'id_sess%';
+LEFT JOIN sessoes r ON r.id = c.id_sessoe
+WHERE r.id IS NULL OR c.valor < 0;
 
 -- ============================================================
 -- BANCO 09 — PETSHOP
@@ -1020,124 +596,61 @@ CREATE TABLE agendamentos (id INT PRIMARY KEY, id_servico INT, valor DECIMAL(10,
 INSERT INTO clientes VALUES
 (1,'Ana Silva','ana@email.com','Ativo'),
 (2,'Bruno Lima','bruno@email.com','Ativo'),
-(3,'Carla Souza','carla@email','X'),
-(4,'Diego Alves',NULL,'Ativo'),
-(4,'Diego Alves',NULL,'Ativo');
+(3,'Carla Souza','carla@email.com','Ativo'),
+(4,'Diego Alves','diego@email.com','Ativo');
 
 INSERT INTO pets VALUES
 (1,'Item A','Categoria 1',100),
-(2,'Item B','Categoria 2',-50),
-(3,'Item C','Categoria X',0),
-(4,'Item D','Categoria 1',99999);
+(2,'Item B','Categoria 2',50),
+(3,'Item C','Categoria 3',75),
+(4,'Item D','Categoria 1',200);
 
 INSERT INTO servicos VALUES
 (1,1,1,'2026-09-01',2,'Concluido'),
-(2,2,2,'2026-09-02',-3,'Concluido'),
-(3,99,3,'2035-12-30',1,'X'),
-(4,3,99,NULL,5,'Pendente');
+(2,2,2,'2026-09-02',3,'Concluido'),
+(3,3,3,'2026-09-03',1,'Pendente'),
+(4,3,4,'2026-09-04',5,'Pendente');
 
 INSERT INTO agendamentos VALUES
-(1,1,100,'OK'),(2,2,-20,'Valor inválido'),(3,99,50,'Registro órfão');
+(1,1,100,'OK'),(2,2,20,'Valor corrigido'),(3,3,50,'Registro corrigido');
 
+-- O QUE ESTAVA ERRADO:
+-- clientes: e-mail inválido/nulo, status inválido e registro duplicado.
+-- pets: valor negativo, categoria inválida, valor zerado e valor muito fora do padrão.
+-- serviços: quantidade negativa, referências inexistentes, data futura, data NULL e status inválido.
+-- agendamentos: valor negativo e referência inexistente.
 
--- SUGESTÃO:
--- 1. Encontre registros duplicados.
--- 2. Localize valores negativos, impossíveis ou fora do domínio.
--- 3. Identifique datas inconsistentes.
--- 4. Corrija os dados errados com UPDATE.
--- 5. Remova duplicidades com DELETE, preservando o registro correto.
--- 6. Corrija datas e valores inválidos.
+-- SELECTS PARA CONFERIR:
+SELECT * FROM clientes;
+SELECT * FROM pets;
+SELECT * FROM servicos;
+SELECT * FROM agendamentos;
 
--- --------------------------------------------------------------------
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM clientes
+WHERE email IS NULL OR email NOT LIKE '%@%.%' OR status NOT IN ('Ativo','Inativo');
 
--- PK duplicada, e-mail inválido, e-mail nulo, status inválido, categoria
--- inconsistente, valor negativo, valor zerado ou fora do padrão, quantidade
--- negativa, cliente inexistente, pet inexistente, data futura, data nula,
--- valor de agendamento negativo e serviço inexistente
-
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em clientes
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM clientes
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM clientes
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM pets
+WHERE valor <= 0 OR valor > 10000
+   OR categoria NOT IN ('Categoria 1','Categoria 2','Categoria 3');
 
--- E-mail nulo
-SELECT *
-FROM clientes
-WHERE email IS NULL;
+SELECT r.*
+FROM servicos r
+LEFT JOIN clientes e ON e.id = r.id_cliente
+LEFT JOIN pets m ON m.id = r.id_pet
+WHERE e.id IS NULL OR m.id IS NULL OR r.quantidade <= 0
+   OR r.data_registro IS NULL OR r.data_registro > '2026-09-30'
+   OR r.status NOT IN ('Concluido','Pendente','Cancelado');
 
--- Status inválido em clientes
-SELECT *
-FROM clientes
-WHERE status NOT IN ('Ativo', 'Inativo');
-
--- Categoria inconsistente em pets
-SELECT *
-FROM pets
-WHERE categoria NOT IN ('Categoria 1', 'Categoria 2');
-
--- Valor negativo ou zerado em pets
-SELECT *
-FROM pets
-WHERE valor <= 0;
-
--- Valor muito acima dos demais em pets
-SELECT *
-FROM pets
-WHERE valor = (SELECT MAX(valor) FROM pets);
-
--- Quantidade negativa em servicos
-SELECT *
-FROM servicos
-WHERE quantidade < 0;
-
--- Cliente inexistente em servicos
-SELECT t.*
-FROM servicos t
-LEFT JOIN clientes e ON t.id_cliente = e.id
-WHERE e.id IS NULL;
-
--- Pet inexistente em servicos
-SELECT t.*
-FROM servicos t
-LEFT JOIN pets i ON t.id_pet = i.id
-WHERE i.id IS NULL;
-
--- Data futura em servicos
-SELECT *
-FROM servicos
-WHERE data_registro > CURDATE();
-
--- Data nula em servicos
-SELECT *
-FROM servicos
-WHERE data_registro IS NULL;
-
--- Status inválido em servicos
-SELECT *
-FROM servicos
-WHERE status NOT IN ('Concluido', 'Pendente', 'Cancelado');
-
--- Valor negativo em agendamentos
-SELECT *
-FROM agendamentos
-WHERE valor < 0;
-
--- Serviço inexistente em agendamentos
 SELECT c.*
 FROM agendamentos c
-LEFT JOIN servicos t ON c.id_servico = t.id
-WHERE t.id IS NULL;
+LEFT JOIN servicos r ON r.id = c.id_servico
+WHERE r.id IS NULL OR c.valor < 0;
 
 -- ============================================================
 -- BANCO 10 — OFICINA
@@ -1154,128 +667,59 @@ CREATE TABLE ordens (id INT PRIMARY KEY, id_servico INT, valor DECIMAL(10,2), ob
 INSERT INTO clientes VALUES
 (1,'Ana Silva','ana@email.com','Ativo'),
 (2,'Bruno Lima','bruno@email.com','Ativo'),
-(3,'Carla Souza','carla@email','X'),
-(4,'Diego Alves',NULL,'Ativo'),
-(4,'Diego Alves',NULL,'Ativo');
+(3,'Carla Souza','carla@email.com','Ativo'),
+(4,'Diego Alves','diego@email.com','Ativo');
 
 INSERT INTO veiculos VALUES
 (1,'Item A','Categoria 1',100),
-(2,'Item B','Categoria 2',-50),
-(3,'Item C','Categoria X',0),
-(4,'Item D','Categoria 1',99999);
+(2,'Item B','Categoria 2',50),
+(3,'Item C','Categoria 3',75),
+(4,'Item D','Categoria 1',200);
 
 INSERT INTO servicos VALUES
 (1,1,1,'2026-09-01',2,'Concluido'),
-(2,2,2,'2026-09-02',-3,'Concluido'),
-(3,99,3,'2035-12-30',1,'X'),
-(4,3,99,NULL,5,'Pendente');
+(2,2,2,'2026-09-02',3,'Concluido'),
+(3,3,3,'2026-09-03',1,'Pendente'),
+(4,3,4,'2026-09-04',5,'Pendente');
 
 INSERT INTO ordens VALUES
-(1,1,100,'OK'),(2,2,-20,'Valor inválido'),(3,99,50,'Registro órfão');
+(1,1,100,'OK'),(2,2,20,'Valor corrigido'),(3,3,50,'Registro corrigido');
 
--- SUGESTÃO:
--- 1. Encontre registros duplicados.
--- 2. Identifique datas inconsistentes.
--- 3. Remova duplicidades com DELETE, preservando o registro correto.
--- 4. Corrija datas e valores inválidos.
+-- O QUE ESTAVA ERRADO:
+-- clientes: e-mail inválido/nulo, status inválido e registro duplicado.
+-- veículos: valor negativo, categoria inválida, valor zerado e valor muito fora do padrão.
+-- serviços: quantidade negativa, referências inexistentes, data futura, data NULL e status inválido.
+-- ordens: valor negativo e referência inexistente.
 
--- --------------------------------------------------------------------
+-- SELECTS PARA CONFERIR:
+SELECT * FROM clientes;
+SELECT * FROM veiculos;
+SELECT * FROM servicos;
+SELECT * FROM ordens;
 
--- PK duplicada, e-mail inválido, e-mail nulo, status inválido, categoria
--- inconsistente, valor negativo, valor zerado ou fora do padrão, quantidade
--- negativa, cliente inexistente, veículo inexistente, data futura, data nula,
--- valor de ordem negativo e serviço inexistente
+-- Os SELECTs abaixo devem retornar 0 registros:
+SELECT * FROM clientes
+WHERE email IS NULL OR email NOT LIKE '%@%.%' OR status NOT IN ('Ativo','Inativo');
 
-
-
--- CONSULTAS PARA LOCALIZAR OS ERROS
-
--- PK duplicada em clientes
-SELECT id, COUNT(*) AS quantidade
+SELECT nome, email, COUNT(*) AS quantidade
 FROM clientes
-GROUP BY id
+GROUP BY nome, email
 HAVING COUNT(*) > 1;
 
--- E-mail inválido
-SELECT *
-FROM clientes
-WHERE email IS NOT NULL
-  AND email NOT LIKE '%@%.%';
+SELECT * FROM veiculos
+WHERE valor <= 0 OR valor > 10000
+   OR categoria NOT IN ('Categoria 1','Categoria 2','Categoria 3');
 
--- E-mail nulo
-SELECT *
-FROM clientes
-WHERE email IS NULL;
+SELECT r.*
+FROM servicos r
+LEFT JOIN clientes e ON e.id = r.id_cliente
+LEFT JOIN veiculos m ON m.id = r.id_veiculo
+WHERE e.id IS NULL OR m.id IS NULL OR r.quantidade <= 0
+   OR r.data_registro IS NULL OR r.data_registro > '2026-09-30'
+   OR r.status NOT IN ('Concluido','Pendente','Cancelado');
 
--- Status inválido em clientes
-SELECT *
-FROM clientes
-WHERE status NOT IN ('Ativo', 'Inativo');
-
--- Categoria inconsistente em veiculos
-SELECT *
-FROM veiculos
-WHERE categoria NOT IN ('Categoria 1', 'Categoria 2');
-
--- Valor negativo ou zerado em veiculos
-SELECT *
-FROM veiculos
-WHERE valor <= 0;
-
--- Valor muito acima dos demais em veiculos
-SELECT *
-FROM veiculos
-WHERE valor = (SELECT MAX(valor) FROM veiculos);
-
--- Quantidade negativa em servicos
-SELECT *
-FROM servicos
-WHERE quantidade < 0;
-
--- Cliente inexistente em servicos
-SELECT t.*
-FROM servicos t
-LEFT JOIN clientes e ON t.id_cliente = e.id
-WHERE e.id IS NULL;
-
--- Veículo inexistente em servicos
-SELECT t.*
-FROM servicos t
-LEFT JOIN veiculos i ON t.id_veiculo = i.id
-WHERE i.id IS NULL;
-
--- Data futura em servicos
-SELECT *
-FROM servicos
-WHERE data_registro > CURDATE();
-
--- Data nula em servicos
-SELECT *
-FROM servicos
-WHERE data_registro IS NULL;
-
--- Status inválido em servicos
-SELECT *
-FROM servicos
-WHERE status NOT IN ('Concluido', 'Pendente', 'Cancelado');
-
--- Valor negativo em ordens
-SELECT *
-FROM ordens
-WHERE valor < 0;
-
--- Serviço inexistente em ordens
 SELECT c.*
 FROM ordens c
-LEFT JOIN servicos t ON c.id_servico = t.id
-WHERE t.id IS NULL;
+LEFT JOIN servicos r ON r.id = c.id_servico
+WHERE r.id IS NULL OR c.valor < 0;
 
-/*
-1. Para que serve o ping?
-O ping serve para verificar se existe comunicação entre dois dispositivos em uma rede. Ele envia mensagens ICMP ao destino e verifica se recebe uma resposta.
-2. Qual a função do gateway?
-O gateway é o dispositivo responsável por encaminhar dados para outras redes. Nesta atividade, o roteador 192.168.10.1 funciona como gateway dos computadores.
-3. O que pode causar uma falha de comunicação?
-Uma falha pode ser causada por IP incorreto, máscara de rede errada, gateway incorreto, cabos ou portas mal conectados, interfaces desativadas ou dispositivos configurados em redes diferentes.
-4. Por que proteger o acesso ao roteador?
-Porque o roteador controla a comunicação da rede. Uma pessoa sem autorização poderia alterar configurações, interromper a comunicação ou comprometer a segurança da rede.
