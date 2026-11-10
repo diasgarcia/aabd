@@ -124,18 +124,48 @@ delimiter ;
 
 call consultar_categoria('Doces');
 
+-- Trigeers -- automatizando ações no db
 
+create table historico_estoque
+(
+    id               int auto_increment primary key,
+    id_produto       int,
+    estoque_anterior int,
+    estoque_atual    int,
+    data_alterado    timestamp default current_timestamp
+);
 
+delimiter //
+create trigger trg_historico_estoque
+    after update
+    on produtos
+    for each row
+begin
+    insert into historico_estoque (id_produto, estoque_anterior, estoque_atual)
+    values (old.id_produto,
+            old.estoque,
+            NEW.estoque);
+end //
+delimiter ;
 
+update produtos
+set estoque = estoque - 2
+where id_produto = 11;
 
+select *
+from historico_estoque;
 
+-- Transactions - controlando operacoes no banco de dados
+-- start transaction - commit - rollback
 
+start transaction;
+update produtos
+set estoque = estoque + 10
+where id_produto = 11;
+commit;
 
-
-
-
-
-
-
-
-
+start transaction;
+update produtos
+set estoque = estoque - 50
+where id_produto = 11;
+rollback;
